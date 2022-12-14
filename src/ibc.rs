@@ -76,7 +76,7 @@ pub fn ibc_packet_receive(
     env: Env,
     msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, ContractError> {
-    let packet_msg: StdResult<PacketMsg>  = from_slice(&msg.packet.data).unwrap();
+    let packet_msg  = from_slice(&msg.packet.data).unwrap();
 
     match packet_msg {
         PacketMsg::Increment { } => increment(deps, env),
