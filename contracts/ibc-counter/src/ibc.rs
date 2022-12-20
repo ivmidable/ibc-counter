@@ -1,11 +1,10 @@
 use cosmwasm_std::{
-    entry_point, from_slice, to_binary, Binary, Deps, DepsMut, Empty, Env, Event,
-    Ibc3ChannelOpenResponse, IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg,
-    IbcChannelOpenMsg, IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg,
-    IbcPacketTimeoutMsg, IbcReceiveResponse, QueryRequest, StdResult, SystemResult, WasmMsg, Uint128, Addr,
+    entry_point, from_slice, DepsMut, Env, IbcBasicResponse, IbcChannelCloseMsg,
+    IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse, IbcPacketAckMsg,
+    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcReceiveResponse, StdResult,
 };
 
-use crate::ibc_helpers::{StdAck, try_get_ack_error, validate_order_and_version};
+use crate::ibc_helpers::{validate_order_and_version, StdAck};
 
 use crate::error::ContractError;
 use crate::msg::PacketMsg;
@@ -66,7 +65,7 @@ pub fn ibc_channel_close(
         // closing (bad because the channel is, for all intents and
         // purposes, closed) so we must allow the transaction through.
         IbcChannelCloseMsg::CloseConfirm { channel: _ } => Ok(IbcBasicResponse::default()),
-        _ => unreachable!("https://github.com/CosmWasm/cosmwasm/pull/1449"),
+        //_ => unreachable!("https://github.com/CosmWasm/cosmwasm/pull/1449"),
     }
 }
 
@@ -76,31 +75,39 @@ pub fn ibc_packet_receive(
     env: Env,
     msg: IbcPacketReceiveMsg,
 ) -> Result<IbcReceiveResponse, ContractError> {
-    let packet_msg  = from_slice(&msg.packet.data).unwrap();
+    let packet_msg = from_slice(&msg.packet.data).unwrap();
 
     match packet_msg {
-        PacketMsg::Increment { } => increment(deps, env),
+        PacketMsg::Increment {} => increment(deps, env),
         PacketMsg::Reset { count } => reset(deps, env, count),
     }
 }
 
-pub fn increment(deps:DepsMut, _env:Env) -> Result<IbcReceiveResponse, ContractError> {
+pub fn increment(deps: DepsMut, _env: Env) -> Result<IbcReceiveResponse, ContractError> {
+    let mut state = STATE.load(deps.storage)?;
+    state.count += 1;
+    STATE.save(deps.storage, &state)?;
+
     Ok(IbcReceiveResponse::new()
         .add_attribute("method", "ibc_packet_receive")
-        .set_ack(StdAck::success(&"0")))
+        .set_ack(StdAck::success(&"1")))
 }
 
-pub fn reset(deps:DepsMut, env:Env, count:i32) -> Result<IbcReceiveResponse, ContractError> {
+pub fn reset(deps: DepsMut, _env: Env, count: i32) -> Result<IbcReceiveResponse, ContractError> {
+    let mut state = STATE.load(deps.storage)?;
+    state.count = count;
+    STATE.save(deps.storage, &state)?;
+
     Ok(IbcReceiveResponse::new()
         .add_attribute("method", "ibc_packet_receive")
-        .set_ack(StdAck::success(&"0")))
+        .set_ack(StdAck::success(&"1")))
 }
 
 #[entry_point]
 pub fn ibc_packet_ack(
-    deps: DepsMut,
-    env: Env,
-    msg: IbcPacketAckMsg,
+    _deps: DepsMut,
+    _env: Env,
+    _msg: IbcPacketAckMsg,
 ) -> Result<IbcBasicResponse, ContractError> {
     Ok(IbcBasicResponse::new().add_attribute("action", "ibc_packet_ack"))
 }

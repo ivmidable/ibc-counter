@@ -1,0 +1,1 @@
+8bc527ea1e0fbf968acb2f98bcc4a23e3768bdd9266c97269a7c721cc4e90de3  target/wasm32-unknown-unknown/release/ibc_counter.wasm

@@ -1,31 +1,9 @@
 use cosmwasm_std::{
-    from_binary, to_binary, Binary, IbcAcknowledgement, IbcChannel, IbcEndpoint, IbcOrder, from_slice,
+    from_binary, from_slice, to_binary, Binary, IbcAcknowledgement, IbcChannel, IbcOrder,
 };
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{
-    ibc::IBC_VERSION,
-    ContractError,
-};
-
-/// Tries to remove the source prefix from a given class_id. If the
-/// class_id does not begin with the given prefix, returns
-/// `None`. Otherwise, returns `Some(unprefixed)`.
-pub(crate) fn try_pop_source_prefix<'a>(
-    source: &IbcEndpoint,
-    class_id: &'a str,
-) -> Option<&'a str> {
-    let source_prefix = get_endpoint_prefix(source);
-    // This must not panic in the face of non-ascii, or empty
-    // strings. We can not trust classID as it comes from an external
-    // IBC connection.
-    class_id.strip_prefix(&source_prefix)
-}
-
-/// Gets the classID prefix for a given IBC endpoint.
-pub(crate) fn get_endpoint_prefix(source: &IbcEndpoint) -> String {
-    format!("{}/{}/", source.port_id, source.channel_id)
-}
+use crate::{ibc::IBC_VERSION, ContractError};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -138,63 +116,4 @@ pub(crate) fn validate_order_and_version(
     }
 
     Ok(())
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_pop_source_simple() {
-        assert_eq!(
-            try_pop_source_prefix(
-                &IbcEndpoint {
-                    port_id: "wasm.address1".to_string(),
-                    channel_id: "channel-10".to_string(),
-                },
-                "wasm.address1/channel-10/address2"
-            ),
-            Some("address2")
-        )
-    }
-
-    #[test]
-    fn test_pop_source_adversarial() {
-        // Empty string.
-        assert_eq!(
-            try_pop_source_prefix(
-                &IbcEndpoint {
-                    port_id: "wasm.address1".to_string(),
-                    channel_id: "channel-10".to_string(),
-                },
-                ""
-            ),
-            None
-        );
-
-        // Non-ASCII
-        assert_eq!(
-            try_pop_source_prefix(
-                &IbcEndpoint {
-                    port_id: "wasm.address1".to_string(),
-                    channel_id: "channel-10".to_string(),
-                },
-                "☯️☯️"
-            ),
-            None
-        );
-
-        // Invalid classID from prohibited '/' characters.
-        assert_eq!(
-            try_pop_source_prefix(
-                &IbcEndpoint {
-                    port_id: "wasm.address1".to_string(),
-                    channel_id: "channel-10".to_string(),
-                },
-                "wasm.addre//1/channel-10/addre//2"
-            ),
-            None
-        );
-    }
 }
